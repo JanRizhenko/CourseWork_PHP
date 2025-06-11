@@ -1,29 +1,32 @@
 <?php
 
 spl_autoload_register(function ($class) {
-    $prefix = 'Core\\';
-    $base_dir = __DIR__ . '/';
+    $baseDir = dirname(__DIR__) . '/';
 
-    if (str_starts_with($class, $prefix)) {
-        $relative_class = substr($class, strlen($prefix));
-        $file = $base_dir . $relative_class . '.php';
+    $classPath = str_replace('\\', '/', $class);
 
-        if (file_exists($file)) {
-            require_once $file;
-            return;
-        }
+    if (strpos($class, 'App\\Controllers\\') === 0) {
+        $className = str_replace('App\\Controllers\\', '', $class);
+        $file = $baseDir . 'controllers/' . $className . '.php';
+    } elseif (strpos($class, 'App\\Models\\') === 0) {
+        $className = str_replace('App\\Models\\', '', $class);
+        $file = $baseDir . 'models/' . $className . '.php';
+    } elseif (strpos($class, 'Core\\') === 0) {
+        $className = str_replace('Core\\', '', $class);
+        $file = $baseDir . 'core/' . $className . '.php';
+    } else {
+        $file = $baseDir . '../' . $classPath . '.php';
     }
 
-    $paths = [
-        __DIR__ . '/../controllers/',
-        __DIR__ . '/../models/',
-    ];
+    error_log("Autoloader: Trying to load class: $class");
+    error_log("Autoloader: File path: $file");
+    error_log("Autoloader: File exists: " . (file_exists($file) ? 'YES' : 'NO'));
 
-    foreach ($paths as $path) {
-        $file = $path . $class . '.php';
-        if (file_exists($file)) {
-            require_once $file;
-            return;
-        }
+    if (file_exists($file)) {
+        require_once $file;
+        error_log("Autoloader: Successfully loaded: $file");
+        return true;
     }
+
+    return false;
 });
