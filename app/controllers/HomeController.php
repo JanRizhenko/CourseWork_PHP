@@ -9,7 +9,7 @@ class HomeController
     public function index()
     {
         $title = "Головна сторінка";
-        $welcome = "Ласкаво просимо до нашої системи управління квест-кімнатами";
+        $welcome = "Ласкаво просимо до системи управління квест-кімнатами";
 
         try {
             $newsModel = new News();

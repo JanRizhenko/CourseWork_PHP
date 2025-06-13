@@ -1,11 +1,21 @@
 <?php require_once '../app/views/layouts/header.php'; ?>
 
     <h1 class="page-title"><?= htmlspecialchars($title) ?></h1>
-    <p class="page-subtitle"><?= htmlspecialchars($welcome) ?></p>
+    <p><?= htmlspecialchars($welcome) ?></p>
 
-    <div style="margin-bottom: 20px;">
-        <a href="/user/add" class="btn btn-success">+ Додати користувача</a>
+<?php if (isset($_SESSION['success'])): ?>
+    <div class="alert alert-success">
+        <?= htmlspecialchars($_SESSION['success']) ?>
+        <?php unset($_SESSION['success']); ?>
     </div>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['error'])): ?>
+    <div class="alert alert-error">
+        <?= htmlspecialchars($_SESSION['error']) ?>
+        <?php unset($_SESSION['error']); ?>
+    </div>
+<?php endif; ?>
 
     <table>
         <thead>
@@ -16,7 +26,6 @@
             <th>Телефон</th>
             <th>Адміністратор</th>
             <th>Дата реєстрації</th>
-            <th>Дії</th>
         </tr>
         </thead>
         <tbody>
@@ -35,10 +44,6 @@
                         <?php endif; ?>
                     </td>
                     <td><?= htmlspecialchars($user['created_at'] ?? 'Не вказано') ?></td>
-                    <td>
-                        <a href="/user/edit/<?= $user['id'] ?>" class="btn" style="font-size: 0.8rem; padding: 5px 10px;">Редагувати</a>
-                        <a href="/user/delete/<?= $user['id'] ?>" class="btn btn-danger" style="font-size: 0.8rem; padding: 5px 10px;" onclick="return confirm('Ви впевнені?')">Видалити</a>
-                    </td>
                 </tr>
             <?php endforeach; ?>
         <?php else: ?>

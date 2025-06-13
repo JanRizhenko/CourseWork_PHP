@@ -27,9 +27,28 @@ class App
 
         $this->controller = new $controllerClass;
 
-        if (!empty($url[1]) && method_exists($this->controller, $url[1])) {
-            $this->method = $url[1];
-            unset($url[1]);
+        if (!empty($url[1])) {
+            $methodName = $this->convertToCamelCase($url[1]);
+
+            if (method_exists($this->controller, $methodName)) {
+                $this->method = $methodName;
+                unset($url[1]);
+            } else {
+                if (method_exists($this->controller, $url[1])) {
+                    $this->method = $url[1];
+                    unset($url[1]);
+                } else {
+                    if (!method_exists($this->controller, 'index')) {
+                        throw new Exception("Method '{$url[1]}' not found in controller and no default 'index' method available.");
+                    }
+                    array_unshift($url, $url[1]);
+                    unset($url[1]);
+                }
+            }
+        } else {
+            if (!method_exists($this->controller, $this->method)) {
+                throw new Exception("Default method 'index' not found in controller " . get_class($this->controller));
+            }
         }
 
         $this->params = array_values($url ?? []);
@@ -41,5 +60,10 @@ class App
     {
         $url = $_GET['url'] ?? '';
         return explode('/', filter_var(rtrim($url, '/'), FILTER_SANITIZE_URL));
+    }
+
+    private function convertToCamelCase(string $string): string
+    {
+        return lcfirst(str_replace('-', '', ucwords($string, '-')));
     }
 }

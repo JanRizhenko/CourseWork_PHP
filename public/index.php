@@ -1,6 +1,11 @@
 <?php
+session_start();
 
-require_once '../app/core/autoload.php';
+date_default_timezone_set('Europe/Kiev');
+
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../app/core/autoload.php';
+require_once '../app/core/helpers.php';
 
 try {
     $app = new Core\App();
@@ -12,8 +17,9 @@ try {
     echo "Parent directory: " . dirname(__DIR__) . "<br>";
 
     echo "<br>Controller files check:<br>";
-    echo "HomeController.php exists: " . (file_exists('../app/controllers/HomeController.php') ? 'YES' : 'NO') . "<br>";
-    echo "UserController.php exists: " . (file_exists('../app/controllers/UserController.php') ? 'YES' : 'NO') . "<br>";
+    echo "HomeController.php exists: " . (file_exists(__DIR__ . '/../app/controllers/HomeController.php') ? 'YES' : 'NO') . "<br>";
+    echo "UserController.php exists: " . (file_exists(__DIR__ . '/../app/controllers/UserController.php') ? 'YES' : 'NO') . "<br>";
+    echo "AuthController.php exists: " . (file_exists(__DIR__ . '/../app/controllers/AuthController.php') ? 'YES' : 'NO') . "<br>";
 
     exit;
 }
