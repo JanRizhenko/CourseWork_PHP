@@ -311,7 +311,7 @@ class AdminController extends Controller
 
     public function banUser($id)
     {
-        if ($this->userModel->deleteUser($id)) {
+        if ($this->userModel->deleteUserWithBookings($id)) {
             $_SESSION['success'] = 'Користувача успішно заблоковано';
         } else {
             $_SESSION['error'] = 'Помилка при блокуванні користувача';
@@ -320,15 +320,25 @@ class AdminController extends Controller
         $this->redirect('/admin/users');
     }
 
-    public function bookings()
+    public function bookings($action = null, $id = null)
     {
-        $bookings = $this->bookingModel->getAllBookingsWithDetails();
+        switch ($action) {
+            case 'edit':
+                return $this->editBooking($id);
 
-        $this->view('admin/bookings', [
-            'bookings' => $bookings,
-            'title' => 'Управління бронюваннями - QuestBooking',
-            'currentPage' => 'admin'
-        ]);
+            case 'delete':
+                return $this->deleteBooking($id);
+
+            default:
+                $bookings = $this->bookingModel->getAllBookingsWithDetails();
+
+                $this->view('admin/bookings', [
+                    'bookings' => $bookings,
+                    'title' => 'Управління бронюваннями - QuestBooking',
+                    'currentPage' => 'admin'
+                ]);
+                break;
+        }
     }
 
     public function editBooking($id)
@@ -337,8 +347,13 @@ class AdminController extends Controller
         $quests = $this->roomModel->getAllRooms();
 
         if (!$booking) {
+            $_SESSION['error'] = 'Бронювання не знайдено';
             $this->redirect('/admin/bookings');
             return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            return $this->updateBooking($id);
         }
 
         $this->view('admin/edit-booking', [
@@ -352,6 +367,46 @@ class AdminController extends Controller
     public function updateBooking($id)
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $errors = [];
+
+            if (empty($_POST['room_id']) || !is_numeric($_POST['room_id'])) {
+                $errors[] = 'Оберіть квест';
+            }
+
+            if (empty($_POST['booking_date'])) {
+                $errors[] = 'Оберіть дату бронювання';
+            } elseif (strtotime($_POST['booking_date']) < strtotime(date('Y-m-d'))) {
+                $errors[] = 'Дата бронювання не може бути в минулому';
+            }
+
+            if (empty($_POST['time_slot'])) {
+                $errors[] = 'Оберіть час';
+            }
+
+            $existingBooking = $this->bookingModel->getBookingWithDetails($id);
+            if (!$existingBooking) {
+                $errors[] = 'Бронювання не знайдено';
+            }
+
+            if (empty($errors)) {
+                $isConflict = $this->bookingModel->checkBookingConflict(
+                    $_POST['room_id'],
+                    $_POST['booking_date'],
+                    $_POST['time_slot'],
+                    $id
+                );
+
+                if ($isConflict) {
+                    $errors[] = 'Цей час вже зайнятий для обраного квесту';
+                }
+            }
+
+            if (!empty($errors)) {
+                $_SESSION['errors'] = $errors;
+                $this->redirect("/admin/bookings/edit/$id");
+                return;
+            }
+
             $data = [
                 'room_id' => (int)$_POST['room_id'],
                 'booking_date' => $_POST['booking_date'],
@@ -370,12 +425,46 @@ class AdminController extends Controller
 
     public function deleteBooking($id)
     {
+        $booking = $this->bookingModel->getBookingWithDetails($id);
+        if (!$booking) {
+            $_SESSION['error'] = 'Бронювання не знайдено';
+            $this->redirect('/admin/bookings');
+            return;
+        }
+
+        $bookingDate = $booking['booking_date'] ?? null;
+        if ($bookingDate && $bookingDate < date('Y-m-d')) {
+            $_SESSION['error'] = 'Не можна видалити минулі бронювання';
+            $this->redirect('/admin/bookings');
+            return;
+        }
+
         if ($this->bookingModel->deleteBooking($id)) {
-            $_SESSION['success'] = 'Бронювання успішно видалено';
+            $_SESSION['success'] = 'Бронювання успішно скасовано';
         } else {
-            $_SESSION['error'] = 'Помилка при видаленні бронювання';
+            $_SESSION['error'] = 'Помилка при скасуванні бронювання';
         }
 
         $this->redirect('/admin/bookings');
+    }
+
+    public function getAvailableTimeSlots()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $roomId = $_POST['room_id'] ?? null;
+            $date = $_POST['date'] ?? null;
+            $excludeBookingId = $_POST['exclude_booking_id'] ?? null;
+
+            if ($roomId && $date) {
+                $availableSlots = $this->bookingModel->getAvailableTimeSlots($roomId, $date, $excludeBookingId);
+                header('Content-Type: application/json');
+                echo json_encode($availableSlots);
+                exit;
+            }
+        }
+
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid request']);
+        exit;
     }
 }

@@ -269,4 +269,92 @@ class Booking
 
         return $availableSlots;
     }
+
+    public function checkBookingConflict($roomId, $date, $timeSlot, $excludeBookingId = null)
+    {
+        $sql = "SELECT COUNT(*) as count FROM bookings 
+            WHERE room_id = :room_id 
+            AND booking_date = :date 
+            AND time_slot = :time_slot";
+
+        $params = [
+            ':room_id' => $roomId,
+            ':date' => $date,
+            ':time_slot' => $timeSlot
+        ];
+
+        if ($excludeBookingId) {
+            $sql .= " AND id != :exclude_id";
+            $params[':exclude_id'] = $excludeBookingId;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $result['count'] > 0;
+    }
+    public function getAvailableTimeSlots($roomId, $date, $excludeBookingId = null)
+    {
+        $allSlots = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'];
+
+        $sql = "SELECT time_slot FROM bookings 
+            WHERE room_id = :room_id 
+            AND booking_date = :date";
+
+        $params = [
+            ':room_id' => $roomId,
+            ':date' => $date
+        ];
+
+        if ($excludeBookingId) {
+            $sql .= " AND id != :exclude_id";
+            $params[':exclude_id'] = $excludeBookingId;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $bookedSlots = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        return array_diff($allSlots, $bookedSlots);
+    }
+    public function getBookingWithDetails($id)
+    {
+        $sql = "SELECT b.*, u.email as user_email, r.title as room_name, r.price as room_price
+            FROM bookings b
+            LEFT JOIN users u ON b.user_id = u.id
+            LEFT JOIN rooms r ON b.room_id = r.id
+            WHERE b.id = :id";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $id]);
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateBooking($id, $data)
+    {
+        $sql = "UPDATE bookings SET 
+            room_id = :room_id,
+            booking_date = :booking_date,
+            time_slot = :time_slot,
+            updated_at = NOW()
+            WHERE id = :id";
+
+        $params = [
+            ':id' => $id,
+            ':room_id' => $data['room_id'],
+            ':booking_date' => $data['booking_date'],
+            ':time_slot' => $data['time_slot']
+        ];
+
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($params);
+    }
+    public function deleteBooking($id)
+    {
+        $sql = "DELETE FROM bookings WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':id' => $id]);
+    }
 }

@@ -270,7 +270,6 @@
 </div>
 
 <?php
-// Очищаємо старі дані після відображення
 if (isset($_SESSION['old_data'])) {
     unset($_SESSION['old_data']);
 }

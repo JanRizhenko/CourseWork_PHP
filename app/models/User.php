@@ -103,6 +103,28 @@ class User
         return $stmt->execute([$id]);
     }
 
+    public function deleteUserWithBookings($id)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            $sql1 = "DELETE FROM bookings WHERE user_id = :user_id";
+            $stmt1 = $this->db->prepare($sql1);
+            $stmt1->execute(['user_id' => $id]);
+
+            $sql2 = "DELETE FROM users WHERE id = :id";
+            $stmt2 = $this->db->prepare($sql2);
+            $result = $stmt2->execute(['id' => $id]);
+
+            $this->db->commit();
+
+            return $result;
+        } catch (Exception $e) {
+            $this->db->rollback();
+            return false;
+        }
+    }
+
     public function getUserBookingsCount($userId)
     {
         try {
